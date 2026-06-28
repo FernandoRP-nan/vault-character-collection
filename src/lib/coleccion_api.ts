@@ -18,6 +18,11 @@ export const ColeccionAPI = {
         { slug: "overwatch", cat: "juego" },
         { slug: "pokemon", cat: "juego" },
         { slug: "fireemblem", cat: "juego" },
+        { slug: "epic-seven", cat: "juego" },
+        { slug: "azur-lane", cat: "juego" },
+        { slug: "fategrandorder", cat: "juego" },
+        { slug: "princessconnectredive", cat: "juego" },
+        { slug: "browndust2", host: "browndust2.miraheze.org", apiPath: "w/api.php", origen: "Brown Dust 2", cat: "juego" },
         { slug: "dr-stone", cat: "anime" },
         { slug: "onepiece", cat: "anime" },
         { slug: "naruto", cat: "anime" },
@@ -53,6 +58,43 @@ export const ColeccionAPI = {
 
     _nombreWikiDesdeSlug: (slug) =>
         slug.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
+
+    _baseWikiApi: (wiki) => {
+        const host = wiki.host || `${wiki.slug}.fandom.com`;
+        const apiPath = wiki.apiPath || "api.php";
+        return `https://${host}/${apiPath}`;
+    },
+
+    _urlWikiPagina: (wiki, titulo) => {
+        const host = wiki.host || `${wiki.slug}.fandom.com`;
+        const wikiPath = wiki.wikiPath || "wiki";
+        return `https://${host}/${wikiPath}/${encodeURIComponent(titulo.replace(/ /g, "_"))}`;
+    },
+
+    _origenWiki: (wiki) =>
+        wiki.origen || ColeccionAPI._nombreWikiDesdeSlug(wiki.slug),
+
+    // Variantes de búsqueda: "Granadair Brown Dust" también prueba solo "Granadair"
+    _terminosBusquedaWiki: (query) => {
+        const q = query.trim();
+        const palabras = q.split(/\s+/).filter(Boolean);
+        const terminos = new Set([q]);
+        if (palabras.length > 1) {
+            terminos.add(palabras[0]);
+            const masLargo = palabras.reduce((a, b) => (a.length >= b.length ? a : b));
+            terminos.add(masLargo);
+        }
+        return [...terminos];
+    },
+
+    _umbralRelevanciaWiki: (query, titulo, wiki) => {
+        const t = titulo.toLowerCase();
+        const palabras = query.trim().split(/\s+/).filter(Boolean);
+        if (palabras.some(p => p.toLowerCase() === t)) return 40;
+        const origen = ColeccionAPI._origenWiki(wiki).toLowerCase();
+        if (origen && query.toLowerCase().includes(origen)) return 40;
+        return wiki.cat === "manhwa" ? 40 : 50;
+    },
 
     _etiquetaMedioAniList: (media) => {
         if (!media) return { origen: "Desconocido", categoriaMedio: "anime" };
@@ -243,13 +285,8 @@ export const ColeccionAPI = {
 
     _buscarEnWiki: async (requestUrl, wiki, query) => {
         try {
-            const base = `https://${wiki.slug}.fandom.com/api.php`;
-            const consultas = [query];
-            // Si el usuario escribe "Haze Bug Player", también buscar solo el nombre en wikis de manhwa
-            const palabras = query.trim().split(/\s+/);
-            if (palabras.length > 1 && wiki.cat === "manhwa") {
-                consultas.push(palabras[0]);
-            }
+            const base = ColeccionAPI._baseWikiApi(wiki);
+            const consultas = ColeccionAPI._terminosBusquedaWiki(query);
 
             const hitsMap = new Map();
             for (const termino of consultas) {
@@ -261,7 +298,7 @@ export const ColeccionAPI = {
                     if (h.ns !== 0 || h.title.includes("/")) return;
                     if (h.title.includes("Chapter ") || h.title.includes("Episode ")) return;
                     const relevancia = ColeccionAPI._puntuarCoincidencia(query, h.title);
-                    const umbral = wiki.cat === "manhwa" && h.title.toLowerCase() === palabras[0]?.toLowerCase() ? 40 : 50;
+                    const umbral = ColeccionAPI._umbralRelevanciaWiki(query, h.title, wiki);
                     if (relevancia < umbral) return;
                     const prev = hitsMap.get(h.title);
                     if (!prev || relevancia > prev.relevancia) hitsMap.set(h.title, { ...h, relevancia });
@@ -284,9 +321,9 @@ export const ColeccionAPI = {
             return hits.map(h => {
                 const pagina = Object.values(paginas).find(p => p.title === h.title);
                 return {
-                    idExterno: `https://${wiki.slug}.fandom.com/wiki/${encodeURIComponent(h.title.replace(/ /g, "_"))}`,
+                    idExterno: ColeccionAPI._urlWikiPagina(wiki, h.title),
                     nombre: h.title,
-                    origen: ColeccionAPI._nombreWikiDesdeSlug(wiki.slug),
+                    origen: ColeccionAPI._origenWiki(wiki),
                     urlImagen: pagina?.thumbnail?.source || "",
                     tipoFuente: "wiki",
                     categoriaMedio: wiki.cat,

@@ -21,6 +21,14 @@ export const ColeccionUI = {
         const ALTO_TARJETA_NUEVO = "180px"; 
 
         styleEl.innerHTML = `
+          .workspace-leaf-content[data-type="vault-character-collection-dashboard"] {
+              height: 100%; overflow: hidden; display: flex; flex-direction: column;
+          }
+          .workspace-leaf-content[data-type="vault-character-collection-dashboard"] .view-content {
+              flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
+              -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+              padding: 16px 20px 28px; box-sizing: border-box;
+          }
           .panel-configuracion-superior {
               background-color: var(--background-secondary) !important; 
               padding: 20px 24px !important; 
@@ -36,7 +44,7 @@ export const ColeccionUI = {
               flex-wrap: wrap !important;
               width: 100% !important;
           }
-          .suggestion-container { padding: 10px 14px !important; }
+          .suggestion-container { padding: 10px 14px !important; max-height: min(70vh, 520px) !important; overflow-y: auto !important; }
           .suggestion-container .suggestion-item {
               display: flex !important; align-items: center !important; gap: 20px !important;
               padding: 12px 16px !important; height: ${ALTO_FILA_PX} !important; 

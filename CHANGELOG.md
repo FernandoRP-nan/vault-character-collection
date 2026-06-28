@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.1.0] - 2026-06-27
+
+### Added
+- Soporte MediaWiki genérico (Fandom, Miraheze u otros hosts) para importación desde wikis de juegos.
+- Wikis: Brown Dust 2, Epic Seven, Azur Lane, Fate/GO, Princess Connect.
+
+### Fixed
+- Scroll vertical en la vista del tablero y en listas de sugerencias del modal API.
+
 ## [2.0.0] - 2026-06-27
 
 ### Added

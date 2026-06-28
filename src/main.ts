@@ -117,6 +117,7 @@ class CharacterCollectionView extends ItemView {
     async render(): Promise<void> {
         const root = this.containerEl;
         root.empty();
+        root.addClass("vault-character-collection-root");
 
         try {
             const SQL = await this.plugin.ensureSql();
