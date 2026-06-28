@@ -1,6 +1,6 @@
 {
-  "name": "vault-item-collection",
-  "version": "1.0.0",
+  "name": "vault-character-collection",
+  "version": "1.0.1",
   "description": "Colección visual de ítems con tiers, tags e imágenes.",
   "main": "main.js",
   "scripts": {

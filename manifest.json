@@ -1,9 +1,9 @@
 {
-  "id": "vault-item-collection",
-  "name": "Item Collection",
-  "version": "1.0.0",
+  "id": "vault-character-collection",
+  "name": "Character Collection",
+  "version": "1.0.1",
   "minAppVersion": "1.5.0",
-  "description": "Colección visual de ítems con tiers, tags e imágenes.",
+  "description": "Colección visual de personajes con tiers, tags e imágenes.",
   "author": "FernandoRP-nan",
   "isDesktopOnly": false
 }

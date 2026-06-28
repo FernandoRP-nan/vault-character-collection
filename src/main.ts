@@ -26,7 +26,7 @@ declare global {
     }
 }
 
-export const VIEW_TYPE = "vault-item-collection-dashboard";
+export const VIEW_TYPE = "vault-character-collection-dashboard";
 const CONFIG_FOLDER = "Ajustes";
 const CONFIG_NOTE = "Configuración.md";
 const DB_PATH = ".obsidian/scripts/coleccion_personajes.db";
@@ -38,10 +38,10 @@ export default class ItemCollectionPlugin extends Plugin {
         window.ScriptsRuntime.configure(this.app);
 
         this.registerView(VIEW_TYPE, (leaf) => new ItemCollectionView(leaf, this));
-        this.addRibbonIcon("library", "Item Collection", () => this.activateView());
+        this.addRibbonIcon("library", "Character Collection", () => this.activateView());
         this.addCommand({
             id: "open-dashboard",
-            name: "Abrir colección",
+            name: "Abrir colección de personajes",
             callback: () => this.activateView()
         });
     }
@@ -95,7 +95,7 @@ class ItemCollectionView extends ItemView {
     }
 
     getDisplayText(): string {
-        return "Item Collection";
+        return "Character Collection";
     }
 
     getIcon(): string {
@@ -133,7 +133,7 @@ class ItemCollectionView extends ItemView {
         } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
             root.createEl("p", { text: `❌ Error: ${msg}` });
-            new Notice("Item Collection: error al cargar.");
+            new Notice("Character Collection: error al cargar.");
         }
     }
 }
