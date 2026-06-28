@@ -21,14 +21,6 @@ export const ColeccionUI = {
         const ALTO_TARJETA_NUEVO = "180px"; 
 
         styleEl.innerHTML = `
-          .workspace-leaf-content[data-type="vault-character-collection-dashboard"] {
-              height: 100%; overflow: hidden; display: flex; flex-direction: column;
-          }
-          .workspace-leaf-content[data-type="vault-character-collection-dashboard"] .view-content {
-              flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
-              -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
-              padding: 16px 20px 28px; box-sizing: border-box;
-          }
           .panel-configuracion-superior {
               background-color: var(--background-secondary) !important; 
               padding: 20px 24px !important; 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0] - 2026-06-27
+
+### Added
+- Variantes por obra en búsqueda API (mismo personaje en anime, manga y juego como entradas separadas).
+
+### Fixed
+- Scroll vertical en la vista del tablero con contenedor interno dedicado.
+
 ## [2.2.0] - 2026-06-27
 
 ### Added

@@ -302,8 +302,8 @@ class APISuggestModal extends SuggestModal {
     constructor(app, onSelect) {
         super(app);
         this.onSelect = onSelect;
-        // Obsidian muestra solo 5 sugerencias por defecto; la API puede devolver hasta 24
-        this.limit = 24;
+        // Obsidian muestra solo 5 sugerencias por defecto; la API puede devolver hasta 32 variantes
+        this.limit = 32;
         this.setPlaceholder("🌐 Busca personaje (anime, manga, manhwa, juegos… ej: Ganyu, Sung Jinwoo, Ellen Joe)");
         this.resultadosLocales = [];
         this.ultimoQuery = "";
@@ -344,7 +344,7 @@ class APISuggestModal extends SuggestModal {
         const imgCont = el.createEl("div", { className: "mi-contenedor-miniatura" });
         imgCont.createEl("img", { attr: { src: item.urlImagen }, className: "mi-imagen-renderizada" });
 
-        const textCont = el.createEl("div", { style: "display: flex; flex-direction: column; min-width: 0; flex: 1;" });
+        const textCont = el.createEl("div", { style: "display: flex; flex-direction: column; min-width: 0; flex: 1; gap: 3px;" });
         textCont.createEl("strong", { text: item.nombre, style: "color: var(--text-normal);" });
 
         const etiquetas = {
@@ -358,7 +358,19 @@ class APISuggestModal extends SuggestModal {
         const obra = item.origen && item.origen !== "Cargando obra precisa..."
             ? item.origen
             : "Sin datos de obra";
-        textCont.createEl("small", { text: `${iconoFuente}: ${obra}`, style: "color: var(--text-muted);" });
+        const rol = item.rolObra === "MAIN" ? " · Protagonista"
+            : item.rolObra === "SUPPORTING" ? " · Secundario"
+            : "";
+        textCont.createEl("small", {
+            text: `${iconoFuente}: ${obra}${rol}`,
+            style: "color: var(--text-accent); font-weight: 600;"
+        });
+        if (item.tipoFuente === "wiki" || item.tipoFuente === "juego") {
+            textCont.createEl("small", {
+                text: `Fuente: ${item.tipoFuente === "wiki" ? "Wiki" : "API"}`,
+                style: "color: var(--text-muted); font-size: 0.82em;"
+            });
+        }
     }
 
     onChooseSuggestion(item, evt) {

@@ -2,6 +2,7 @@ import { ItemView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import { ColeccionDB } from "./lib/coleccion_db";
 import { ColeccionUI } from "./lib/coleccion_ui";
 import { ColeccionAPI } from "./lib/coleccion_api";
+import { prepareScrollableView } from "./lib/view-scroll";
 import { ScriptsRuntime } from "./runtime/scripts-runtime";
 import { CharacterCollectionSettingTab } from "./settings-tab";
 import {
@@ -98,6 +99,7 @@ export default class CharacterCollectionPlugin extends Plugin {
 
 class CharacterCollectionView extends ItemView {
     private tierFiltro = "0";
+    private scrollHost: HTMLElement | null = null;
 
     constructor(leaf: WorkspaceLeaf, private plugin: CharacterCollectionPlugin) {
         super(leaf);
@@ -120,13 +122,24 @@ class CharacterCollectionView extends ItemView {
     }
 
     async onClose(): Promise<void> {
+        this.scrollHost = null;
         this.containerEl.empty();
     }
 
+    private getScrollRoot(): HTMLElement {
+        if (!this.scrollHost?.isConnected) {
+            this.scrollHost = prepareScrollableView(
+                this,
+                VIEW_TYPE,
+                "vault-character-collection-root"
+            );
+        }
+        return this.scrollHost;
+    }
+
     async render(): Promise<void> {
-        const root = this.containerEl;
+        const root = this.getScrollRoot();
         root.empty();
-        root.addClass("vault-character-collection-root");
 
         try {
             const SQL = await this.plugin.ensureSql();

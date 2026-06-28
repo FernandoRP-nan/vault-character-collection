@@ -112,7 +112,70 @@ export const ColeccionAPI = {
         return [...entries].sort((a, b) => puntajeMedio(a) - puntajeMedio(b))[0];
     },
 
-    // Fuentes canónicas (anime/manga) deben ganar a wikis de juegos con el mismo nombre
+    // Clave única por personaje + obra (permite ver versión anime y versión juego)
+    _claveResultado: (item) => {
+        const partes = [
+            ColeccionAPI._normalizarNombre(item.nombre),
+            ColeccionAPI._normalizarNombre(item.origen || ""),
+            String(item.idExterno || ""),
+            item.tipoFuente || "",
+            item.categoriaMedio || ""
+        ];
+        return partes.join("|");
+    },
+
+    // Sube variantes cuyo juego/anime aparece en la búsqueda ("Granadair brown dust")
+    _bonificacionOrigenEnQuery: (query, item) => {
+        const ori = (item.origen || "").toLowerCase();
+        if (!ori || ori === "desconocido" || ori.includes("cargando") || ori.includes("sin obra")) return 0;
+        const q = query.toLowerCase().trim();
+        if (q.includes(ori)) return 35;
+        const palabrasQ = q.split(/\s+/).filter(p => p.length > 2);
+        const palabrasO = ori.split(/\s+/).filter(p => p.length > 2);
+        if (palabrasQ.some(p => palabrasO.some(o => o.includes(p) || p.includes(o)))) return 28;
+        return 0;
+    },
+
+    _variantesDesdeJikanFull: (datos, baseItem) => {
+        if (!datos) return null;
+        const mapa = new Map();
+        const registrar = (titulo, categoriaMedio, rol) => {
+            if (!titulo) return;
+            const clave = ColeccionAPI._normalizarNombre(titulo);
+            if (!clave || mapa.has(clave)) return;
+            mapa.set(clave, {
+                ...baseItem,
+                origen: titulo,
+                categoriaMedio,
+                rolObra: rol || undefined
+            });
+        };
+        (datos.anime || []).slice(0, 6).forEach(entry => {
+            registrar(entry.anime?.title, "anime", entry.role);
+        });
+        (datos.manga || []).slice(0, 4).forEach(entry => {
+            registrar(entry.manga?.title, "manga", entry.role);
+        });
+        return mapa.size ? Array.from(mapa.values()) : null;
+    },
+
+    _aplanarVariantes: (lista) => {
+        const salida = [];
+        lista.forEach(item => {
+            if (item._variantes?.length) {
+                item._variantes.forEach(v => {
+                    const { _variantes, ...resto } = v;
+                    salida.push(resto);
+                });
+            } else {
+                const { _variantes, ...resto } = item;
+                salida.push(resto);
+            }
+        });
+        return salida;
+    },
+
+    // Fuentes canónicas: ligera preferencia en orden, sin eliminar otras versiones
     _rankFuenteCanonica: (item) => {
         if (item.tipoFuente === "anilist") return 4;
         if (item.tipoFuente === "anime") return 3;
@@ -141,12 +204,17 @@ export const ColeccionAPI = {
                     url: `https://api.jikan.moe/v4/characters/${item.idExterno}/full`,
                     method: "GET"
                 });
-                const info = ColeccionAPI._extraerOrigenJikan(res?.json?.data);
-                if (info) {
-                    item.origen = info.origen;
-                    item.categoriaMedio = info.categoriaMedio;
-                } else if (!item.origen || item.origen === "Cargando obra precisa...") {
-                    item.origen = "Sin obra registrada";
+                const variantes = ColeccionAPI._variantesDesdeJikanFull(res?.json?.data, item);
+                if (variantes?.length) {
+                    item._variantes = variantes;
+                } else {
+                    const info = ColeccionAPI._extraerOrigenJikan(res?.json?.data);
+                    if (info) {
+                        item.origen = info.origen;
+                        item.categoriaMedio = info.categoriaMedio;
+                    } else if (!item.origen || item.origen === "Cargando obra precisa...") {
+                        item.origen = "Sin obra registrada";
+                    }
                 }
             } catch (e) {
                 if (!item.origen || item.origen === "Cargando obra precisa...") {
@@ -211,20 +279,63 @@ export const ColeccionAPI = {
 
     _procesarAniList: (res, query) => {
         if (!res || res.status !== 200 || !res.json?.data?.Page?.characters) return [];
-        return res.json.data.Page.characters.map(c => {
+        return res.json.data.Page.characters.flatMap(c => {
             const nombre = c.name?.userPreferred || c.name?.full || "Sin nombre";
-            const media = ColeccionAPI._seleccionarMedioAniList(c.media);
-            const { origen, categoriaMedio } = ColeccionAPI._etiquetaMedioAniList(media);
-            return {
+            const imagen = c.image?.large || c.image?.medium || "";
+            const relevancia = ColeccionAPI._puntuarCoincidencia(query, nombre);
+            const edges = c.media?.edges || [];
+
+            if (!edges.length) {
+                return [{
+                    idExterno: c.id,
+                    nombre,
+                    origen: "Desconocido",
+                    urlImagen: imagen,
+                    tipoFuente: "anilist",
+                    categoriaMedio: "anime",
+                    prioridad: 5,
+                    relevancia
+                }];
+            }
+
+            const vistos = new Set();
+            const items = [];
+            for (const edge of edges.slice(0, 8)) {
+                const media = {
+                    characterRole: edge.characterRole,
+                    title: edge.node?.title,
+                    type: edge.node?.type,
+                    format: edge.node?.format,
+                    countryOfOrigin: edge.node?.countryOfOrigin
+                };
+                const { origen, categoriaMedio } = ColeccionAPI._etiquetaMedioAniList(media);
+                if (!origen || origen === "Desconocido") continue;
+                const clave = ColeccionAPI._normalizarNombre(origen);
+                if (vistos.has(clave)) continue;
+                vistos.add(clave);
+                items.push({
+                    idExterno: c.id,
+                    nombre,
+                    origen,
+                    urlImagen: imagen,
+                    tipoFuente: "anilist",
+                    categoriaMedio,
+                    prioridad: 5,
+                    relevancia,
+                    rolObra: edge.characterRole || undefined
+                });
+            }
+
+            return items.length ? items : [{
                 idExterno: c.id,
                 nombre,
-                origen,
-                urlImagen: c.image?.large || c.image?.medium || "",
+                origen: "Desconocido",
+                urlImagen: imagen,
                 tipoFuente: "anilist",
-                categoriaMedio,
+                categoriaMedio: "anime",
                 prioridad: 5,
-                relevancia: ColeccionAPI._puntuarCoincidencia(query, nombre)
-            };
+                relevancia
+            }];
         });
     },
 
@@ -322,21 +433,18 @@ export const ColeccionAPI = {
                 + (item.prioridad || 0) * 4
                 + (item.urlImagen ? 6 : 0)
                 + (item.origen && item.origen !== "Cargando obra precisa..." && item.origen !== "Sin obra registrada" ? 3 : 0)
-                + ColeccionAPI._rankFuenteCanonica(item) * 12;
-            const clave = ColeccionAPI._normalizarNombre(item.nombre);
-            if (!clave) return;
+                + ColeccionAPI._rankFuenteCanonica(item) * 5
+                + ColeccionAPI._bonificacionOrigenEnQuery(query, item)
+                + (item.rolObra === "MAIN" ? 4 : item.rolObra === "SUPPORTING" ? 1 : 0);
+            const clave = ColeccionAPI._claveResultado(item);
+            if (!clave.replace(/\|/g, "")) return;
             const prev = mapa.get(clave);
-            const rankNuevo = ColeccionAPI._rankFuenteCanonica(item);
-            const rankPrev = prev ? ColeccionAPI._rankFuenteCanonica(prev) : -1;
-            const reemplazar = !prev
-                || rankNuevo > rankPrev
-                || (rankNuevo === rankPrev && puntaje > prev._puntaje);
-            if (reemplazar) mapa.set(clave, { ...item, _puntaje: puntaje });
+            if (!prev || puntaje > prev._puntaje) mapa.set(clave, { ...item, _puntaje: puntaje });
         });
         return Array.from(mapa.values())
             .sort((a, b) => b._puntaje - a._puntaje)
-            .slice(0, 24)
-            .map(({ _puntaje, relevancia, prioridad, ...rest }) => rest);
+            .slice(0, 32)
+            .map(({ _puntaje, relevancia, prioridad, rolObra, ...rest }) => rest);
     },
 
     buscarPersonajeEnRed: async (nombreQuery) => {
@@ -420,7 +528,7 @@ export const ColeccionAPI = {
                 ColeccionAPI._enriquecerOriginesAnilist(requestUrl, anilistItems)
             ]);
 
-            return ColeccionAPI._finalizarResultados(unificados, q);
+            return ColeccionAPI._finalizarResultados(ColeccionAPI._aplanarVariantes(unificados), q);
         } catch (error) {
             console.error("Error en búsqueda multi-api:", error);
             return [];
