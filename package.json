@@ -1,8 +1,12 @@
 {
   "name": "vault-character-collection",
   "version": "1.1.0",
-  "description": "Colección visual de ítems con tiers, tags e imágenes.",
+  "description": "Visual character collection with tiers, tags, and configurable local image paths.",
   "main": "main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FernandoRP-nan/vault-character-collection.git"
+  },
   "scripts": {
     "dev": "node esbuild.config.mjs",
     "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
