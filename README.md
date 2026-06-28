@@ -31,15 +31,13 @@ Releases precompilados: [GitHub Releases](https://github.com/FernandoRP-nan/vaul
 
 ## Configuración
 
-Crea o edita una nota de configuración en tu vault (por defecto `Ajustes/Configuración.md`) con:
+Ajustes → Complementos → **Character Collection** → icono de engranaje.
 
-```yaml
----
-ruta_imagenes: Adjuntos/MiCarpeta
----
-```
+- **Carpeta de imágenes:** ruta relativa al vault (p. ej. `Adjuntos/Personajes`).
 
-## Uso
+Si antes usabas `ruta_imagenes` en `Ajustes/Configuración.md`, se importa automáticamente la primera vez.
+
+## Datos y privacidad
 
 - Cinta lateral → icono de biblioteca.
 - Paleta de comandos → **Abrir colección de personajes**.

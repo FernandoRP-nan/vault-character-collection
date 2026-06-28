@@ -1,6 +1,11 @@
+/* coleccion_ui.ts — migrado a módulo TS */
+// @ts-nocheck
+import { ColeccionDB } from "./coleccion_db";
+import { ColeccionModals } from "./coleccion_modals";
+
 /* coleccion_ui.js - Renderizado del Dashboard adaptado a 3 columnas e inyección CSS */
 
-window.ColeccionUI = {
+export const ColeccionUI = {
     injectStyles: () => {
         const ID_ESTILOS = "estilos-tarjetas-coleccion-personajes";
         let styleEl = document.getElementById(ID_ESTILOS);
@@ -119,8 +124,8 @@ window.ColeccionUI = {
         });
         
         btnNuevo.onclick = () => {
-            new window.ColeccionModals.PersonajeFormModal(app, null, rutaImagenesConfigurada, () => {
-                setTimeout(() => window.ColeccionUI.renderDashboard(mainContainer, db, dbPath, rutaImagenesConfigurada, guardarDbFunc, tierFiltroActual, setFiltroCallback), 150);
+            new ColeccionModals.PersonajeFormModal(app, null, rutaImagenesConfigurada, () => {
+                setTimeout(() => ColeccionUI.renderDashboard(mainContainer, db, dbPath, rutaImagenesConfigurada, guardarDbFunc, tierFiltroActual, setFiltroCallback), 150);
             }, db, dbPath).open();
         };
 
@@ -185,26 +190,26 @@ window.ColeccionUI = {
                 
                 const btnEdit = accionesDiv.createEl("button", { text: "📝", title: "Editar", className: "tarjeta-card-btn" });
                 btnEdit.onclick = () => {
-                    new window.ColeccionModals.PersonajeFormModal(app, personajeObj, rutaImagenesConfigurada, () => {
+                    new ColeccionModals.PersonajeFormModal(app, personajeObj, rutaImagenesConfigurada, () => {
                         setTimeout(() => {
-                            window.ColeccionUI.renderDashboard(mainContainer, db, dbPath, rutaImagenesConfigurada, guardarDbFunc, tierFiltroActual, setFiltroCallback);
+                            ColeccionUI.renderDashboard(mainContainer, db, dbPath, rutaImagenesConfigurada, guardarDbFunc, tierFiltroActual, setFiltroCallback);
                         }, 150);
                     }, db, dbPath).open();
                 };
 
                 const btnDel = accionesDiv.createEl("button", { text: "🗑️", title: "Eliminar", className: "tarjeta-card-btn" });
                 btnDel.onclick = () => {
-                    new window.ColeccionModals.ConfirmModal(app, `¿Estás completamente seguro de que deseas eliminar a "${personajeObj.nombre}" de tu base de datos?`, async () => {
+                    new ColeccionModals.ConfirmModal(app, `¿Estás completamente seguro de que deseas eliminar a "${personajeObj.nombre}" de tu base de datos?`, async () => {
                         try {
                             const stmt = db.prepare("DELETE FROM coleccion WHERE id = :id");
                             stmt.run({ ':id': personajeObj.id });
                             stmt.free();
-                            window.ColeccionDB.guardar(db, dbPath);
+                            ColeccionDB.guardar(db, dbPath);
 
                             new Notice(`🗑️ Registro de ${personajeObj.nombre} eliminado permanentemente.`);
 
                             setTimeout(() => {
-                                window.ColeccionUI.renderDashboard(mainContainer, db, dbPath, rutaImagenesConfigurada, guardarDbFunc, tierFiltroActual, setFiltroCallback);
+                                ColeccionUI.renderDashboard(mainContainer, db, dbPath, rutaImagenesConfigurada, guardarDbFunc, tierFiltroActual, setFiltroCallback);
                             }, 150);
                         } catch (err) {
                             console.error("Error crítico al eliminar el personaje:", err);

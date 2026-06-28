@@ -1,3 +1,9 @@
+/* coleccion_modals.ts — migrado a módulo TS */
+// @ts-nocheck
+import { ColeccionAPI } from "./coleccion_api";
+import { ColeccionDB } from "./coleccion_db";
+import { Modal, Setting, SuggestModal, Notice } from "obsidian";
+
 // coleccion_modals.js - Modales de interacción e importación de archivos
 const { Modal, SuggestModal, Notice } = require('obsidian');
 
@@ -101,7 +107,7 @@ class PersonajeFormModal extends Modal {
             
             btnAutoImportar.onclick = (e) => { 
                 e.preventDefault(); 
-                new window.ColeccionModals.APISuggestModal(this.app, async (personajeAPI) => { 
+                new ColeccionModals.APISuggestModal(this.app, async (personajeAPI) => { 
                     new Notice("📥 Descargando recursos e información precisa..."); 
                     
                     const nombreCarpetaLimpio = personajeAPI.nombre.replace(/[^a-zA-Z0-9\s-_]/g, "").trim(); 
@@ -112,8 +118,8 @@ class PersonajeFormModal extends Modal {
                     }
 
                     const [nombreImagenGuardada, origenReal] = await Promise.all([ 
-                        window.ColeccionAPI.descargarImagenABoveda(this.app, personajeAPI.urlImagen, rutaDestinoConSubcarpeta, personajeAPI.nombre), 
-                        window.ColeccionAPI.obtenerOrigenPreciso(personajeAPI.idExterno, personajeAPI.tipoFuente, personajeAPI.origen) 
+                        ColeccionAPI.descargarImagenABoveda(this.app, personajeAPI.urlImagen, rutaDestinoConSubcarpeta, personajeAPI.nombre), 
+                        ColeccionAPI.obtenerOrigenPreciso(personajeAPI.idExterno, personajeAPI.tipoFuente, personajeAPI.origen) 
                     ]); 
                     
                     this.imagenTemporalCreada = `${rutaDestinoConSubcarpeta}/${nombreImagenGuardada}`;
@@ -163,7 +169,7 @@ class PersonajeFormModal extends Modal {
         const btnBuscarImg = imgSelectorContainer.createEl("button", { text: "🖼️ Galería", style: "padding: 0 14px; cursor: pointer; font-weight: bold; height: 40px; border-radius: 6px; white-space: nowrap;" });
         btnBuscarImg.onclick = (e) => {
             e.preventDefault();
-            new window.ColeccionModals.ImagenVisualSuggestModal(this.app, this.rutaRaizConfig, (nombreArchivo) => {
+            new ColeccionModals.ImagenVisualSuggestModal(this.app, this.rutaRaizConfig, (nombreArchivo) => {
                 this.archivoBinarioCargar = null;
                 this.imagenSeleccionada = nombreArchivo;
                 inImagenDisplay.value = nombreArchivo;
@@ -239,7 +245,7 @@ class PersonajeFormModal extends Modal {
                 } 
                 
                 try {
-                    window.ColeccionDB.guardar(this.db, this.dbPath);
+                    ColeccionDB.guardar(this.db, this.dbPath);
                     this.guardadoExitoso = true;
                 } catch (err) {
                     console.error("Error crítico guardando el archivo SQLite:", err); 
@@ -315,7 +321,7 @@ class APISuggestModal extends SuggestModal {
             this.ultimoQuery = q;
             new Notice("🔍 Buscando en la red...");
             
-            const res = await window.ColeccionAPI.buscarPersonajeEnRed(q);
+            const res = await ColeccionAPI.buscarPersonajeEnRed(q);
             
             if (res && res.length > 0) {
                 this.resultadosLocales = res;
@@ -358,7 +364,7 @@ class APISuggestModal extends SuggestModal {
     }
 }
 
-window.ColeccionModals = {
+export const ColeccionModals = {
     ImagenVisualSuggestModal,
     ConfirmModal,
     PersonajeFormModal,

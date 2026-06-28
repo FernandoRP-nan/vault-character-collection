@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.0.0] - 2026-06-27
+
+### Added
+- Panel de ajustes del complemento: carpeta de imágenes (ya no requiere nota `Configuración.md`).
+- Importación única de `ruta_imagenes` desde la nota legada si existía.
+
+### Changed
+- Migración completa a TypeScript modular.
+
 ## [1.1.0] - 2026-06-27
 
 ### Added

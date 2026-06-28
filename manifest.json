@@ -1,7 +1,7 @@
 {
   "id": "vault-character-collection",
   "name": "Character Collection",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "minAppVersion": "1.5.0",
   "description": "Visual character collection with tiers, tags, and configurable local image paths.",
   "author": "FernandoRP-nan",

@@ -1,4 +1,8 @@
-window.ColeccionAPI = {
+/* coleccion_api.ts — migrado a módulo TS */
+// @ts-nocheck
+
+
+export const ColeccionAPI = {
 
     // Wikis Fandom consultadas directamente (evita bloqueo Cloudflare del buscador global)
     WIKIS: [
@@ -79,7 +83,7 @@ window.ColeccionAPI = {
                     url: `https://api.jikan.moe/v4/characters/${item.idExterno}/full`,
                     method: "GET"
                 });
-                const info = window.ColeccionAPI._extraerOrigenJikan(res?.json?.data);
+                const info = ColeccionAPI._extraerOrigenJikan(res?.json?.data);
                 if (info) {
                     item.origen = info.origen;
                     item.categoriaMedio = info.categoriaMedio;
@@ -115,7 +119,7 @@ window.ColeccionAPI = {
                 });
                 const media = res?.json?.data?.Character?.media?.nodes?.[0];
                 if (media) {
-                    const { origen, categoriaMedio } = window.ColeccionAPI._etiquetaMedioAniList(media);
+                    const { origen, categoriaMedio } = ColeccionAPI._etiquetaMedioAniList(media);
                     item.origen = origen;
                     item.categoriaMedio = categoriaMedio;
                 }
@@ -133,7 +137,7 @@ window.ColeccionAPI = {
             tipoFuente: "anime",
             categoriaMedio: "anime",
             prioridad: 2,
-            relevancia: window.ColeccionAPI._puntuarCoincidencia(query, p.name)
+            relevancia: ColeccionAPI._puntuarCoincidencia(query, p.name)
         }));
         const filtrados = items.filter(i => i.relevancia >= 40);
         return (filtrados.length ? filtrados : items).sort((a, b) => b.relevancia - a.relevancia);
@@ -144,7 +148,7 @@ window.ColeccionAPI = {
         return res.json.data.Page.characters.map(c => {
             const nombre = c.name?.userPreferred || c.name?.full || "Sin nombre";
             const media = c.media?.nodes?.[0];
-            const { origen, categoriaMedio } = window.ColeccionAPI._etiquetaMedioAniList(media);
+            const { origen, categoriaMedio } = ColeccionAPI._etiquetaMedioAniList(media);
             return {
                 idExterno: c.id,
                 nombre,
@@ -153,23 +157,23 @@ window.ColeccionAPI = {
                 tipoFuente: "anilist",
                 categoriaMedio,
                 prioridad: 3,
-                relevancia: window.ColeccionAPI._puntuarCoincidencia(query, nombre)
+                relevancia: ColeccionAPI._puntuarCoincidencia(query, nombre)
             };
         });
     },
 
     _buscarLoL: async (requestUrl, query) => {
         try {
-            if (!window.ColeccionAPI._cacheLoL) {
+            if (!ColeccionAPI._cacheLoL) {
                 const verRes = await requestUrl({ url: "https://ddragon.leagueoflegends.com/api/versions.json", method: "GET" });
                 const version = verRes.json[0];
                 const champRes = await requestUrl({
                     url: `https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/champion.json`,
                     method: "GET"
                 });
-                window.ColeccionAPI._cacheLoL = { version, data: champRes.json.data };
+                ColeccionAPI._cacheLoL = { version, data: champRes.json.data };
             }
-            const { version, data } = window.ColeccionAPI._cacheLoL;
+            const { version, data } = ColeccionAPI._cacheLoL;
             const q = query.toLowerCase().trim();
             return Object.values(data)
                 .filter(c => {
@@ -185,7 +189,7 @@ window.ColeccionAPI = {
                     tipoFuente: "juego",
                     categoriaMedio: "juego",
                     prioridad: 5,
-                    relevancia: window.ColeccionAPI._puntuarCoincidencia(query, c.name)
+                    relevancia: ColeccionAPI._puntuarCoincidencia(query, c.name)
                 }));
         } catch (e) {
             return [];
@@ -211,7 +215,7 @@ window.ColeccionAPI = {
                 (searchRes?.json?.query?.search || []).forEach(h => {
                     if (h.ns !== 0 || h.title.includes("/")) return;
                     if (h.title.includes("Chapter ") || h.title.includes("Episode ")) return;
-                    const relevancia = window.ColeccionAPI._puntuarCoincidencia(query, h.title);
+                    const relevancia = ColeccionAPI._puntuarCoincidencia(query, h.title);
                     const umbral = wiki.cat === "manhwa" && h.title.toLowerCase() === palabras[0]?.toLowerCase() ? 40 : 50;
                     if (relevancia < umbral) return;
                     const prev = hitsMap.get(h.title);
@@ -237,12 +241,12 @@ window.ColeccionAPI = {
                 return {
                     idExterno: `https://${wiki.slug}.fandom.com/wiki/${encodeURIComponent(h.title.replace(/ /g, "_"))}`,
                     nombre: h.title,
-                    origen: window.ColeccionAPI._nombreWikiDesdeSlug(wiki.slug),
+                    origen: ColeccionAPI._nombreWikiDesdeSlug(wiki.slug),
                     urlImagen: pagina?.thumbnail?.source || "",
                     tipoFuente: "juego",
                     categoriaMedio: wiki.cat,
                     prioridad: 5,
-                    relevancia: h.relevancia || window.ColeccionAPI._puntuarCoincidencia(query, h.title)
+                    relevancia: h.relevancia || ColeccionAPI._puntuarCoincidencia(query, h.title)
                 };
             });
         } catch (e) {
@@ -253,11 +257,11 @@ window.ColeccionAPI = {
     _finalizarResultados: (lista, query) => {
         const mapa = new Map();
         lista.forEach(item => {
-            const puntaje = (item.relevancia || window.ColeccionAPI._puntuarCoincidencia(query, item.nombre))
+            const puntaje = (item.relevancia || ColeccionAPI._puntuarCoincidencia(query, item.nombre))
                 + (item.prioridad || 0) * 4
                 + (item.urlImagen ? 6 : 0)
                 + (item.origen && item.origen !== "Cargando obra precisa..." && item.origen !== "Sin obra registrada" ? 3 : 0);
-            const clave = window.ColeccionAPI._normalizarNombre(item.nombre);
+            const clave = ColeccionAPI._normalizarNombre(item.nombre);
             if (!clave) return;
             const prev = mapa.get(clave);
             if (!prev || puntaje > prev._puntaje) mapa.set(clave, { ...item, _puntaje: puntaje });
@@ -299,16 +303,16 @@ window.ColeccionAPI = {
                     headers: { "Content-Type": "application/json", Accept: "application/json" },
                     body: JSON.stringify({ query: queryAniList, variables: { search: q } })
                 }).catch(() => null),
-                window.ColeccionAPI._buscarLoL(requestUrl, q),
-                ...window.ColeccionAPI.WIKIS.map(w => window.ColeccionAPI._buscarEnWiki(requestUrl, w, q))
+                ColeccionAPI._buscarLoL(requestUrl, q),
+                ...ColeccionAPI.WIKIS.map(w => ColeccionAPI._buscarEnWiki(requestUrl, w, q))
             ];
 
             const resultados = await Promise.all(peticiones);
             const [resJikan, resAnilist, resLol, ...resWikis] = resultados;
 
             const unificados = [
-                ...window.ColeccionAPI._procesarAniList(resAnilist, q),
-                ...window.ColeccionAPI._procesarJikan(resJikan, q),
+                ...ColeccionAPI._procesarAniList(resAnilist, q),
+                ...ColeccionAPI._procesarJikan(resJikan, q),
                 ...(Array.isArray(resLol) ? resLol : []),
                 ...resWikis.flat()
             ];
@@ -316,11 +320,11 @@ window.ColeccionAPI = {
             const jikanItems = unificados.filter(i => i.tipoFuente === "anime");
             const anilistItems = unificados.filter(i => i.tipoFuente === "anilist");
             await Promise.all([
-                window.ColeccionAPI._enriquecerOriginesJikan(requestUrl, jikanItems),
-                window.ColeccionAPI._enriquecerOriginesAnilist(requestUrl, anilistItems)
+                ColeccionAPI._enriquecerOriginesJikan(requestUrl, jikanItems),
+                ColeccionAPI._enriquecerOriginesAnilist(requestUrl, anilistItems)
             ]);
 
-            return window.ColeccionAPI._finalizarResultados(unificados, q);
+            return ColeccionAPI._finalizarResultados(unificados, q);
         } catch (error) {
             console.error("Error en búsqueda multi-api:", error);
             return [];
@@ -340,7 +344,7 @@ window.ColeccionAPI = {
                 url: `https://api.jikan.moe/v4/characters/${idExterno}/full`,
                 method: "GET"
             });
-            const info = window.ColeccionAPI._extraerOrigenJikan(response?.json?.data);
+            const info = ColeccionAPI._extraerOrigenJikan(response?.json?.data);
             return info?.origen || origenSugerido || "Desconocido";
         } catch (error) {
             return origenSugerido || "Desconocido";
