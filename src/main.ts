@@ -1,11 +1,17 @@
 import { ItemView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import "./legacy";
 
+const PLUGIN_ID = "vault-character-collection";
+const PLUGIN_ROOT = `.obsidian/plugins/${PLUGIN_ID}`;
+const LEGACY_DB = ".obsidian/scripts/coleccion_personajes.db";
+const DB_PATH = ".obsidian/plugins-data/vault-character-collection/coleccion_personajes.db";
+
 declare global {
     interface Window {
         ScriptsRuntime: {
-            configure: (app: unknown) => void;
+            configure: (app: unknown, opts?: { sqlJsRel?: string; sqlWasmRel?: string }) => void;
             initSqlJs: () => Promise<unknown>;
+            migrarArchivoBinario: (legacy: string, dest: string) => Promise<boolean>;
         };
         ColeccionDB: {
             init: (SQL: unknown, dbPath: string) => Promise<unknown>;
@@ -29,15 +35,21 @@ declare global {
 export const VIEW_TYPE = "vault-character-collection-dashboard";
 const CONFIG_FOLDER = "Ajustes";
 const CONFIG_NOTE = "Configuración.md";
-const DB_PATH = ".obsidian/scripts/coleccion_personajes.db";
 
-export default class ItemCollectionPlugin extends Plugin {
+export default class CharacterCollectionPlugin extends Plugin {
     private sql: unknown = null;
 
     async onload(): Promise<void> {
-        window.ScriptsRuntime.configure(this.app);
+        window.ScriptsRuntime.configure(this.app, {
+            sqlJsRel: `${PLUGIN_ROOT}/assets/sql-wasm.js`,
+            sqlWasmRel: `${PLUGIN_ROOT}/assets/sql-wasm.wasm`
+        });
 
-        this.registerView(VIEW_TYPE, (leaf) => new ItemCollectionView(leaf, this));
+        if (await window.ScriptsRuntime.migrarArchivoBinario(LEGACY_DB, DB_PATH)) {
+            new Notice("Character Collection: base de datos migrada a plugins-data.");
+        }
+
+        this.registerView(VIEW_TYPE, (leaf) => new CharacterCollectionView(leaf, this));
         this.addRibbonIcon("library", "Character Collection", () => this.activateView());
         this.addCommand({
             id: "open-dashboard",
@@ -83,10 +95,10 @@ export default class ItemCollectionPlugin extends Plugin {
     }
 }
 
-class ItemCollectionView extends ItemView {
+class CharacterCollectionView extends ItemView {
     private tierFiltro = "0";
 
-    constructor(leaf: WorkspaceLeaf, private plugin: ItemCollectionPlugin) {
+    constructor(leaf: WorkspaceLeaf, private plugin: CharacterCollectionPlugin) {
         super(leaf);
     }
 

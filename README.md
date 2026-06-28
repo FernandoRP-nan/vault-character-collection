@@ -1,65 +1,35 @@
 # Character Collection
 
-Plugin local de Obsidian: colección visual de **personajes** con tiers, tags, imágenes y metadatos.
+Plugin local de Obsidian: colección visual de **personajes** (tiers, tags, imágenes).
 
-Reemplaza la antigua vista DataviewJS `Waifus.md`. Independiente de Task Board y Social Agenda.
+Reemplaza la nota DataviewJS `Waifus.md` / tarjeta Home «Colección de personajes».
 
-## Instalación local
-
-> **Importante:** desarrolla **fuera del vault**. Si el repo con `node_modules` queda dentro de la bóveda, Obsidian puede colgarse al indexar.
-
-### 1. Clonar (fuera del vault)
+## Instalación
 
 ```bash
 git clone https://github.com/FernandoRP-nan/vault-character-collection.git
+cd vault-character-collection
+npm install && npm run build
+ln -sf "$(pwd)" /ruta/vault/.obsidian/plugins/vault-character-collection
 ```
-
-### 2. sql.js (una vez por vault)
-
-Ver [vault-task-board](https://github.com/FernandoRP-nan/vault-task-board#2-sqljs-una-vez-por-vault).
-
-### 3. Compilar
-
-```bash
-cd /ruta/a/Obsidian-Plugins/vault-character-collection
-npm install
-npm run build
-```
-
-### 4. Enlazar al vault
-
-```bash
-VAULT="/ruta/a/tu/vault/.obsidian/plugins"
-ln -sf /ruta/a/Obsidian-Plugins/vault-character-collection "$VAULT/vault-character-collection"
-```
-
-### 5. Activar
-
-Ajustes → Complementos → **Character Collection**.
-
-## Uso
-
-- Icono 📚 en la cinta lateral
-- Paleta de comandos → **Abrir colección de personajes**
-
-## Configuración
-
-Lee `ruta_imagenes` del frontmatter de `Ajustes/Configuración.md` (por defecto `Adjuntos`).
 
 ## Datos
 
-- `.obsidian/scripts/coleccion_personajes.db`
+| Qué | Ruta |
+|-----|------|
+| SQLite | `.obsidian/plugins-data/vault-character-collection/coleccion_personajes.db` |
+| Imágenes | `Ajustes/Configuración.md` → `ruta_imagenes` |
+| sql.js | empaquetado en `assets/` del plugin |
+
+Migración automática desde `.obsidian/scripts/coleccion_personajes.db`.
+
+## Uso
+
+- Cinta lateral → 📚
+- Comando → **Abrir colección de personajes**
 
 ## Desarrollo
 
 ```bash
-npm run dev
-npm run build
+npm run dev && npm run build
 ```
-
-## Historial de nombres
-
-| Antes | Ahora |
-|-------|-------|
-| Nota `Waifus.md` (DataviewJS) | Plugin `vault-character-collection` |
-| Repo `vault-item-collection` | Repo `vault-character-collection` |
