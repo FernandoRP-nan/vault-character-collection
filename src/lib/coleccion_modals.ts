@@ -302,6 +302,8 @@ class APISuggestModal extends SuggestModal {
     constructor(app, onSelect) {
         super(app);
         this.onSelect = onSelect;
+        // Obsidian muestra solo 5 sugerencias por defecto; la API puede devolver hasta 24
+        this.limit = 24;
         this.setPlaceholder("🌐 Busca personaje (anime, manga, manhwa, juegos… ej: Ganyu, Sung Jinwoo, Ellen Joe)");
         this.resultadosLocales = [];
         this.ultimoQuery = "";

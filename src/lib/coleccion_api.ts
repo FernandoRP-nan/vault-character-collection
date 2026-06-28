@@ -24,6 +24,7 @@ export const ColeccionAPI = {
         { slug: "jujutsu-kaisen", cat: "anime" },
         { slug: "chainsaw-man", cat: "anime" },
         { slug: "bleach", cat: "anime" },
+        { slug: "lycoris-recoil", cat: "anime" },
         { slug: "bug-player", cat: "manhwa" },
         { slug: "solo-leveling", cat: "manhwa" },
         { slug: "omniscient-readers-viewpoint", cat: "manhwa" },
@@ -60,6 +61,42 @@ export const ColeccionAPI = {
         if (media.format === "MANHWA" || media.countryOfOrigin === "KR") return { origen, categoriaMedio: "manhwa" };
         if (media.format === "MANHUA" || media.countryOfOrigin === "CN") return { origen, categoriaMedio: "manhua" };
         return { origen, categoriaMedio: "manga" };
+    },
+
+    // Prioriza la obra original (MAIN + anime/manga) frente a colaboraciones en juegos
+    _seleccionarMedioAniList: (mediaConnection) => {
+        if (!mediaConnection) return null;
+        let entries = [];
+        if (mediaConnection.edges?.length) {
+            entries = mediaConnection.edges.map(e => ({
+                characterRole: e.characterRole,
+                title: e.node?.title,
+                type: e.node?.type,
+                format: e.node?.format,
+                countryOfOrigin: e.node?.countryOfOrigin
+            }));
+        } else if (Array.isArray(mediaConnection)) {
+            entries = mediaConnection;
+        } else if (mediaConnection.nodes?.length) {
+            entries = mediaConnection.nodes;
+        }
+        if (!entries.length) return null;
+        const ordenTipo = { ANIME: 0, MANGA: 1 };
+        const puntajeMedio = (m) => {
+            let p = ordenTipo[m.type] ?? 5;
+            if (m.characterRole === "MAIN") p -= 3;
+            else if (m.characterRole === "SUPPORTING") p -= 1;
+            return p;
+        };
+        return [...entries].sort((a, b) => puntajeMedio(a) - puntajeMedio(b))[0];
+    },
+
+    // Fuentes canónicas (anime/manga) deben ganar a wikis de juegos con el mismo nombre
+    _rankFuenteCanonica: (item) => {
+        if (item.tipoFuente === "anilist") return 4;
+        if (item.tipoFuente === "anime") return 3;
+        if (["anime", "manga", "manhwa", "manhua"].includes(item.categoriaMedio)) return 2;
+        return 0;
     },
 
     _extraerOrigenJikan: (datos) => {
@@ -106,8 +143,14 @@ export const ColeccionAPI = {
             try {
                 const query = `query ($id: Int) {
                     Character(id: $id) {
-                        media(perPage: 1, sort: RELEVANCE) {
-                            nodes { title { romaji english userPreferred } type format countryOfOrigin }
+                        media(perPage: 8) {
+                            edges {
+                                characterRole
+                                node {
+                                    title { romaji english userPreferred }
+                                    type format countryOfOrigin
+                                }
+                            }
                         }
                     }
                 }`;
@@ -117,7 +160,9 @@ export const ColeccionAPI = {
                     headers: { "Content-Type": "application/json", Accept: "application/json" },
                     body: JSON.stringify({ query, variables: { id: item.idExterno } })
                 });
-                const media = res?.json?.data?.Character?.media?.nodes?.[0];
+                const media = ColeccionAPI._seleccionarMedioAniList(
+                    res?.json?.data?.Character?.media
+                );
                 if (media) {
                     const { origen, categoriaMedio } = ColeccionAPI._etiquetaMedioAniList(media);
                     item.origen = origen;
@@ -136,7 +181,7 @@ export const ColeccionAPI = {
             urlImagen: p.images?.jpg?.image_url || p.images?.webp?.image_url || "",
             tipoFuente: "anime",
             categoriaMedio: "anime",
-            prioridad: 2,
+            prioridad: 4,
             relevancia: ColeccionAPI._puntuarCoincidencia(query, p.name)
         }));
         const filtrados = items.filter(i => i.relevancia >= 40);
@@ -147,7 +192,7 @@ export const ColeccionAPI = {
         if (!res || res.status !== 200 || !res.json?.data?.Page?.characters) return [];
         return res.json.data.Page.characters.map(c => {
             const nombre = c.name?.userPreferred || c.name?.full || "Sin nombre";
-            const media = c.media?.nodes?.[0];
+            const media = ColeccionAPI._seleccionarMedioAniList(c.media);
             const { origen, categoriaMedio } = ColeccionAPI._etiquetaMedioAniList(media);
             return {
                 idExterno: c.id,
@@ -156,7 +201,7 @@ export const ColeccionAPI = {
                 urlImagen: c.image?.large || c.image?.medium || "",
                 tipoFuente: "anilist",
                 categoriaMedio,
-                prioridad: 3,
+                prioridad: 5,
                 relevancia: ColeccionAPI._puntuarCoincidencia(query, nombre)
             };
         });
@@ -188,7 +233,7 @@ export const ColeccionAPI = {
                     urlImagen: `https://ddragon.leagueoflegends.com/cdn/${version}/img/champion/${c.image.full}`,
                     tipoFuente: "juego",
                     categoriaMedio: "juego",
-                    prioridad: 5,
+                    prioridad: 1,
                     relevancia: ColeccionAPI._puntuarCoincidencia(query, c.name)
                 }));
         } catch (e) {
@@ -243,9 +288,9 @@ export const ColeccionAPI = {
                     nombre: h.title,
                     origen: ColeccionAPI._nombreWikiDesdeSlug(wiki.slug),
                     urlImagen: pagina?.thumbnail?.source || "",
-                    tipoFuente: "juego",
+                    tipoFuente: "wiki",
                     categoriaMedio: wiki.cat,
-                    prioridad: 5,
+                    prioridad: wiki.cat === "juego" ? 1 : 2,
                     relevancia: h.relevancia || ColeccionAPI._puntuarCoincidencia(query, h.title)
                 };
             });
@@ -260,11 +305,17 @@ export const ColeccionAPI = {
             const puntaje = (item.relevancia || ColeccionAPI._puntuarCoincidencia(query, item.nombre))
                 + (item.prioridad || 0) * 4
                 + (item.urlImagen ? 6 : 0)
-                + (item.origen && item.origen !== "Cargando obra precisa..." && item.origen !== "Sin obra registrada" ? 3 : 0);
+                + (item.origen && item.origen !== "Cargando obra precisa..." && item.origen !== "Sin obra registrada" ? 3 : 0)
+                + ColeccionAPI._rankFuenteCanonica(item) * 12;
             const clave = ColeccionAPI._normalizarNombre(item.nombre);
             if (!clave) return;
             const prev = mapa.get(clave);
-            if (!prev || puntaje > prev._puntaje) mapa.set(clave, { ...item, _puntaje: puntaje });
+            const rankNuevo = ColeccionAPI._rankFuenteCanonica(item);
+            const rankPrev = prev ? ColeccionAPI._rankFuenteCanonica(prev) : -1;
+            const reemplazar = !prev
+                || rankNuevo > rankPrev
+                || (rankNuevo === rankPrev && puntaje > prev._puntaje);
+            if (reemplazar) mapa.set(clave, { ...item, _puntaje: puntaje });
         });
         return Array.from(mapa.values())
             .sort((a, b) => b._puntaje - a._puntaje)
@@ -285,10 +336,13 @@ export const ColeccionAPI = {
                         id
                         name { full userPreferred }
                         image { large medium }
-                        media(perPage: 3, sort: RELEVANCE) {
-                            nodes {
-                                title { romaji english userPreferred }
-                                type format countryOfOrigin
+                        media(perPage: 8) {
+                            edges {
+                                characterRole
+                                node {
+                                    title { romaji english userPreferred }
+                                    type format countryOfOrigin
+                                }
                             }
                         }
                     }
@@ -332,7 +386,7 @@ export const ColeccionAPI = {
     },
 
     obtenerOrigenPreciso: async (idExterno, tipoFuente, origenSugerido) => {
-        if (tipoFuente === "juego" || tipoFuente === "anilist") {
+        if (tipoFuente === "juego" || tipoFuente === "wiki" || tipoFuente === "anilist") {
             return origenSugerido || (tipoFuente === "juego" ? "Videojuego" : "Desconocido");
         }
         if (origenSugerido && origenSugerido !== "Cargando obra precisa..." && origenSugerido !== "Sin obra registrada") {
