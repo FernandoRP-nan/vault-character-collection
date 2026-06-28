@@ -1,43 +1,22 @@
 /* coleccion_api.ts — migrado a módulo TS */
 // @ts-nocheck
-
+import {
+    DEFAULT_API_SEARCH,
+    type ApiSearchSettings
+} from "../api-search-settings";
 
 export const ColeccionAPI = {
 
-    // Wikis Fandom consultadas directamente (evita bloqueo Cloudflare del buscador global)
-    WIKIS: [
-        { slug: "zenless-zone-zero", cat: "juego" },
-        { slug: "genshin-impact", cat: "juego" },
-        { slug: "honkai-star-rail", cat: "juego" },
-        { slug: "wuthering-waves", cat: "juego" },
-        { slug: "bluearchive", cat: "juego" },
-        { slug: "nikke-goddess-of-victory-international", cat: "juego" },
-        { slug: "arknights", cat: "juego" },
-        { slug: "persona", cat: "juego" },
-        { slug: "valorant", cat: "juego" },
-        { slug: "overwatch", cat: "juego" },
-        { slug: "pokemon", cat: "juego" },
-        { slug: "fireemblem", cat: "juego" },
-        { slug: "epic-seven", cat: "juego" },
-        { slug: "azur-lane", cat: "juego" },
-        { slug: "fategrandorder", cat: "juego" },
-        { slug: "princessconnectredive", cat: "juego" },
-        { slug: "browndust2", host: "browndust2.miraheze.org", apiPath: "w/api.php", origen: "Brown Dust 2", cat: "juego" },
-        { slug: "dr-stone", cat: "anime" },
-        { slug: "onepiece", cat: "anime" },
-        { slug: "naruto", cat: "anime" },
-        { slug: "jujutsu-kaisen", cat: "anime" },
-        { slug: "chainsaw-man", cat: "anime" },
-        { slug: "bleach", cat: "anime" },
-        { slug: "lycoris-recoil", cat: "anime" },
-        { slug: "bug-player", cat: "manhwa" },
-        { slug: "solo-leveling", cat: "manhwa" },
-        { slug: "omniscient-readers-viewpoint", cat: "manhwa" },
-        { slug: "tower-of-god", cat: "manhwa" },
-        { slug: "eleceed", cat: "manhwa" },
-        { slug: "lookism", cat: "manhwa" },
-        { slug: "wind-breaker", cat: "manhwa" }
-    ],
+    _searchConfig: null,
+
+    configureSearch: (config) => {
+        ColeccionAPI._searchConfig = config;
+    },
+
+    _getSearchConfig: () => ColeccionAPI._searchConfig || DEFAULT_API_SEARCH,
+
+    _getWikisActivas: () =>
+        ColeccionAPI._getSearchConfig().wikiSources.filter(w => w.enabled),
 
     _cacheLoL: null,
 
@@ -363,6 +342,7 @@ export const ColeccionAPI = {
     buscarPersonajeEnRed: async (nombreQuery) => {
         try {
             const { requestUrl } = require('obsidian');
+            const cfg = ColeccionAPI._getSearchConfig();
             const q = nombreQuery.trim();
             if (q.length < 2) return [];
             const qEscaped = encodeURIComponent(q);
@@ -386,20 +366,45 @@ export const ColeccionAPI = {
                 }
             }`;
 
-            const peticiones = [
-                requestUrl({ url: `https://api.jikan.moe/v4/characters?q=${qEscaped}&limit=10`, method: "GET" }).catch(() => null),
-                requestUrl({
-                    url: "https://graphql.anilist.co",
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", Accept: "application/json" },
-                    body: JSON.stringify({ query: queryAniList, variables: { search: q } })
-                }).catch(() => null),
-                ColeccionAPI._buscarLoL(requestUrl, q),
-                ...ColeccionAPI.WIKIS.map(w => ColeccionAPI._buscarEnWiki(requestUrl, w, q))
-            ];
+            const peticiones = [];
+
+            if (cfg.enableJikan) {
+                peticiones.push(
+                    requestUrl({ url: `https://api.jikan.moe/v4/characters?q=${qEscaped}&limit=10`, method: "GET" }).catch(() => null)
+                );
+            } else {
+                peticiones.push(Promise.resolve(null));
+            }
+
+            if (cfg.enableAnilist) {
+                peticiones.push(
+                    requestUrl({
+                        url: "https://graphql.anilist.co",
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", Accept: "application/json" },
+                        body: JSON.stringify({ query: queryAniList, variables: { search: q } })
+                    }).catch(() => null)
+                );
+            } else {
+                peticiones.push(Promise.resolve(null));
+            }
+
+            if (cfg.enableLoL) {
+                peticiones.push(ColeccionAPI._buscarLoL(requestUrl, q));
+            } else {
+                peticiones.push(Promise.resolve([]));
+            }
+
+            peticiones.push(
+                ...ColeccionAPI._getWikisActivas().map(w => ColeccionAPI._buscarEnWiki(requestUrl, w, q))
+            );
 
             const resultados = await Promise.all(peticiones);
-            const [resJikan, resAnilist, resLol, ...resWikis] = resultados;
+            const wikisCount = ColeccionAPI._getWikisActivas().length;
+            const resJikan = cfg.enableJikan ? resultados[0] : null;
+            const resAnilist = cfg.enableAnilist ? resultados[1] : null;
+            const resLol = cfg.enableLoL ? resultados[2] : [];
+            const resWikis = resultados.slice(3, 3 + wikisCount);
 
             const unificados = [
                 ...ColeccionAPI._procesarAniList(resAnilist, q),

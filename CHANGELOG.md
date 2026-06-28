@@ -1,5 +1,11 @@
 # Changelog
 
+## [2.2.0] - 2026-06-27
+
+### Added
+- Panel de ajustes para fuentes API: activar AniList, Jikan y LoL.
+- Gestión de wikis MediaWiki (editar, desactivar, añadir personalizadas, restaurar defaults).
+
 ## [2.1.0] - 2026-06-27
 
 ### Added

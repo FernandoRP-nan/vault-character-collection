@@ -1,11 +1,13 @@
 import { ItemView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
 import { ColeccionDB } from "./lib/coleccion_db";
 import { ColeccionUI } from "./lib/coleccion_ui";
+import { ColeccionAPI } from "./lib/coleccion_api";
 import { ScriptsRuntime } from "./runtime/scripts-runtime";
 import { CharacterCollectionSettingTab } from "./settings-tab";
 import {
     DEFAULT_SETTINGS,
     LEGACY_CONFIG_PATH,
+    normalizeApiSearchSettings,
     type CharacterCollectionSettings
 } from "./settings";
 
@@ -47,7 +49,12 @@ export default class CharacterCollectionPlugin extends Plugin {
 
     async loadSettings(): Promise<void> {
         const stored = (await this.loadData()) as Partial<CharacterCollectionSettings> | null;
-        this.settings = { ...DEFAULT_SETTINGS, ...stored };
+        this.settings = {
+            ...DEFAULT_SETTINGS,
+            ...stored,
+            apiSearch: normalizeApiSearchSettings(stored?.apiSearch)
+        };
+        ColeccionAPI.configureSearch(this.settings.apiSearch);
 
         if (!stored?.imageFolderPath) {
             await this.migrateImagePathFromLegacyNote();
@@ -55,6 +62,8 @@ export default class CharacterCollectionPlugin extends Plugin {
     }
 
     async saveSettings(): Promise<void> {
+        this.settings.apiSearch = normalizeApiSearchSettings(this.settings.apiSearch);
+        ColeccionAPI.configureSearch(this.settings.apiSearch);
         await this.saveData(this.settings);
     }
 
